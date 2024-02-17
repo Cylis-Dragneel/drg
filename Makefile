@@ -1,2 +1,2 @@
-kilo: kilo.c
-				$(CC) kilo.c -o kilo -Wall -Wextra -pedantic -std=c99
+Dragneel: Dragneel.c
+				$(CC) Dragneel.c -o Dragneel -Wall -Wextra -pedantic -std=c99
