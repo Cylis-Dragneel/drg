@@ -9,10 +9,17 @@
 #include <string.h>
 
 /* DEFINES */
-#define DRAG_VERSION "0.0.1" 
+#define DRAG_VERSION "0.0.1"
+enum editorKey {
+  ARROW_LEFT = 'a',
+  ARROW_RIGHT = 'd',
+  ARROW_UP = 'w',
+  ARROW_DOWN = 's'
+};
 
 /* DATA */
 struct editorConfig {
+  int cx, cy;
   int screenrows;
   int screencols;
   struct termios orig_termios;
@@ -56,7 +63,22 @@ char editorReadKey() {
   while((nread = read(STDIN_FILENO, &c, 1)) != 1) {
     if (nread == -1 && errno !=EAGAIN) die("read");
   }
-  return c;
+  if (c == '\x1b') {
+    char seq[3];
+    if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
+    if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
+    if (seq[0] == '[') {
+      switch (seq[1]) {
+        case 'A': return 'j';
+        case 'B': return 'k';
+        case 'C': return 'l';
+        case 'D': return 'h';
+      }
+    }
+    return '\x1b';
+  } else {
+    return c;
+  }
 }
 
 /* Get Cursor Position Function */
@@ -114,6 +136,24 @@ void abFree(struct abuf *ab) {
 }
 
 /* Input */
+void editorMoveCursor() {
+  switch (key) {
+    case 'h':
+      E.cx--;
+      break;
+    case 'l':
+      E.cx++;
+      break;
+    case 'j':
+      E.cy--;
+      break;
+    case 'k':
+      E.cy++;
+      break;  
+  }
+}
+
+
 void editorProcessKeyboard() {
   char c = editorReadKey();
 
@@ -123,6 +163,14 @@ void editorProcessKeyboard() {
       write(STDOUT_FILENO, "\x1b[H", 3);
       exit(0);
       break;
+
+
+    case 'j':
+    case 'k':
+    case 'h':
+    case 'l':
+      editorMoveCursor(c);
+      break;
   }
 }
 
@@ -131,7 +179,7 @@ void editorDrawRows(struct abuf *ab) {
   int y;
   for (y = 0; y < E.screenrows; y++) {
     if (y == E.screencols / 3) {
-    char welcome[80];
+    char welcome[80]; 
     int welcomelen = snprintf(welcome, sizeof(welcome), "Dragneel Editor -- version %s", DRAG_VERSION);
     if (welcomelen > E.screencols) welcomelen = E.screencols;
     int padding = (E.screencols - welcomelen) / 2;
@@ -153,14 +201,18 @@ void editorDrawRows(struct abuf *ab) {
 
 void editorRefreshScreen() {
   struct abuf ab = ABUF_INIT;
-
+  
   abAppend(&ab, "\x1b[?25l", 6);
-  abAppend(&ab, "\x1b[J", 3);
-
+  
+  abAppend(&ab, "\x0b[H", 3);
+  
   editorDrawRows(&ab);
-    
-  abAppend(&ab, "\x1b[H", 3);
-  abAppend(&ab, "\x1b[??25h", 6);
+  
+  char buf[32];
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx +1);
+  abAppend(&ab, buf, strlen(buf));
+  
+  abAppend(&ab, "\x1b[?25h", 6);
 
   write(STDOUT_FILENO, ab.b, ab.len);
   abFree(&ab);
@@ -170,6 +222,9 @@ void editorRefreshScreen() {
 /* Main Program */
 
 void mainEditor() {
+  E.cx =0;
+  E.cy =0;
+
   if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
 }
 
