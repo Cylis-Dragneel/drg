@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -19,8 +20,10 @@
 /* DEFINES */
 #define DRAG_VERSION "0.0.1"
 #define TAB_STOP 8
+#define CTRL_KEY(k) ((k) & 0x1f)
 
 enum editorKey {
+  BACKSPACE = 127,
   ARROW_LEFT = 1000,
   ARROW_RIGHT,
   ARROW_UP,
@@ -221,8 +224,46 @@ void editorAppendRows (char *s, size_t len) {
   E.numrows++;
 }
 
+void editorRowInsertChar(erow *row, int at, int c) {
+  if (at < 0 || at > row->size) at = row->size;
+  row->chars = realloc(row->chars, row->size + 2);
+  memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
+  row->size++;
+  row->chars[at] = c;
+  editorUpdateRow(row);
+}
+
+/* Editor Operations */
+
+void editorInsertChar(int c) {
+  if (E.cy == E.numrows) {
+    editorAppendRows("", 0);
+  }
+  editorRowInsertChar(&E.row[E.cy], E.cx, c);
+  E.cx++;
+}
 
 /* File I/O */
+
+char *editorRowToString(int *buflen) {
+  int totlen = 0;
+  int j;
+  for (j = 0; j < E.numrows; j++)
+    totlen += E.row[j].size + 1;
+  *buflen = totlen;
+
+  char *buf = malloc(totlen);
+  char *p = buf;
+  for (j = 0; j < E.numrows; j++) {
+    memcpy(p, E.row[j].chars, E.row[j].size);
+    p += E.row[j].size;
+    *p = '\n';
+    p++;
+  }
+
+  return buf;
+}
+
 void editorOpen(char *filename) {
   free(E.filename);
   E.filename = strdup(filename);
@@ -234,7 +275,8 @@ void editorOpen(char *filename) {
   size_t linecap = 0;
   ssize_t linelen;
   while ((linelen = getline(&line, &linecap, fp)) != -1) {
-    while (linelen > 0 && (line[linelen - 1] == '\n' || line[linelen - 1] == '\r'))
+    while (linelen > 0 && (line[linelen - 1] == '\n' ||
+      line[linelen - 1] == '\r'))
       linelen--;
     editorAppendRows(line, linelen);
   }
@@ -242,6 +284,26 @@ void editorOpen(char *filename) {
   fclose(fp);
 }
 
+void editorSave() {
+  if (E.filename == NULL) return;
+
+  int len;
+  char *buf = editorRowToString(&len);
+
+  int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
+  if (fd != -1) {
+    if (ftruncate(fd, len) != -1) {
+      if (write(fd, buf, len) == len) {
+        close(fd);
+        free(buf);
+        return;
+      }
+    }
+    close(fd);
+  }
+
+  free(buf);
+}
 
 /*** append buffer ***/
 
@@ -308,10 +370,18 @@ void editorProcessKeyboard() {
   int c = editorReadKey();
 
   switch (c) {
+    case '\r':
+      /* TODO */
+      break;
+
     case 27:
       write(STDOUT_FILENO, "\x1b [2J", 4);
       write(STDOUT_FILENO, "\x1b[H", 3);
       exit(0);
+      break;
+
+    case CTRL_KEY('s'):
+      editorSave();
       break;
 
     case HOME_KEY:
@@ -320,6 +390,12 @@ void editorProcessKeyboard() {
     case END_KEY:
       if (E.cy < E.numrows)
         E.cx = E.row[E.cy].size;
+      break;
+    
+    case BACKSPACE:
+    case DEL_KEY:
+    case CTRL_KEY('h'):
+      /* TODO */
       break;
       
     case PAGE_UP:
@@ -342,6 +418,13 @@ void editorProcessKeyboard() {
     case ARROW_LEFT:
     case ARROW_RIGHT:
       editorMoveCursor(c);
+      break;
+
+    case CTRL_KEY('l'):
+      break;
+
+    default:
+      editorInsertChar(c);
       break;
   }
 }
