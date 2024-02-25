@@ -39,25 +39,25 @@ A window should pop up, where you just need to click "Install" and a C compiler 
 #### Linux
 - **On Ubuntu or Debian Based Systems**
 ```
-sudo apt install gcc make
+$ sudo apt install gcc make
 ```
 
 - **On Arch Based Systems**
 ```
-sudo pacman -S gcc make
+$ sudo pacman -S gcc make
 ```
 
 ### Installation
 - **Clone the repository**
 ```
-git clone https://github.com/BlackPhoenix/Portfolio
-cd Portfolio/Dragneel-TextEditor/
+$ git clone https://github.com/BlackPhoenix/Portfolio
+$ cd Portfolio/Dragneel-TextEditor/
 ```
 
 - **Create the binary**
 ```
-make #Compiles the binary
-sudo cp Dragneel /usr/local/bin/ #To copy the binary to a Path Folder, you may change the destination as you like
+$ make #Compiles the binary
+$ sudo cp Dragneel /usr/local/bin/ #To copy the binary to a Path Folder, you may change the destination as you like
 ```
 
 ### Usage
