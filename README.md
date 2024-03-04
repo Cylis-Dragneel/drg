@@ -50,19 +50,19 @@ $ sudo pacman -S gcc make
 ### Installation
 - **Clone the repository**
 ```
-$ git clone https://github.com/BlackPhoenix/Portfolio
-$ cd Portfolio/Dragneel-TextEditor/
+$ git clone https://github.com/Cylis-Dragneel/drg
+$ cd drg
 ```
 
 - **Create the binary**
 ```
 $ make #Compiles the binary
-$ sudo cp Dragneel /usr/local/bin/ #To copy the binary to a Path Folder, you may change the destination as you like
+$ sudo cp Dragneel /usr/local/bin/drg #You may change the destination to any directory in PATH
 ```
 
 ### Usage
 ```
-Dragneel <path/to/file>
+drg <path/to/file>
 ```
 
 - **Simple Keybindings**
